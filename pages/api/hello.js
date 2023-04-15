@@ -1,10 +1,10 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import fs from 'fs'
-import formidable from 'formidable'
+import formidable from 'formidable' // 用來處理 FormData
 
 export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: false, // 用來處理 FormData
   },
 }
 
