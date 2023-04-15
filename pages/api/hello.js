@@ -1,30 +1,53 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import fs from 'fs'
 import formidable from 'formidable' // 用來處理 FormData
-
+import * as gcsStorage from '@google-cloud/storage'
+// Creates a client using Application Default Credentials
+const storage = new gcsStorage.Storage()
+const bucketName = process.env.GCS_BUCKET_NAME
+const bucket = storage.bucket(bucketName)
+console.log('bucket', bucket)
 export const config = {
   api: {
     bodyParser: false, // 用來處理 FormData
   },
 }
-
+function getUrl(fileName) {
+  return bucket.file(fileName).publicUrl()
+}
 const handler = async (req, res) => {
   const form = new formidable.IncomingForm()
   form.parse(req, async (err, fields, file) => {
     if (err) {
       return res.status(500).json({ error: '解析 FormData 数据失败' })
     }
+    const filePath = file?.files?.filepath
     const mimetype = file?.files?.mimetype
-    // 未來用 GCP 或 AWS 來存檔
-    fs.readFile(file.files.filepath, (err, data) => {
-      if (err) {
-        return res.status(500).json({ error: '讀取文件失敗' })
+    const originalFileName = file?.files?.originalFilename
+
+    bucket.upload(
+      `${filePath}`,
+      {
+        metadata: {
+          originalname: originalFileName,
+          contentType: mimetype,
+        },
+      },
+      function (err, file) {
+        console.log('GCSFILE:', file)
+        if (err) {
+          console.error(`Error uploading image image_to_upload.jpeg: ${err}`)
+        } else {
+          console.log(`Image image_to_upload.jpeg uploaded to ${bucketName}.`)
+          // 設定檔案為公開
+          file.makePublic().then(() => {
+            let fileGCSUrl = getUrl(`${file.name}`)
+            console.log('fileGCSUrl：', fileGCSUrl)
+            return res.status(200).json({ file: fileGCSUrl })
+          })
+        }
       }
-      // 将文件内容转换为 base64
-      const base64Data = data.toString('base64')
-      // 在这里可以对 base64Data 进行处理，例如保存到数据库或进行其他业务逻辑处理
-      return res.status(200).json({ file: `data:${mimetype};base64,${base64Data}` })
-    })
+    )
   })
 }
 export default handler
