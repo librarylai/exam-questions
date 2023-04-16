@@ -15,6 +15,7 @@ export default function Home() {
       <main>
         <Navbar />
         <Editor value={'Foo'} onChange={(v) => console.log(v)} />
+        <button onClick={() => fetch('/api/getFiles')}>取得照片</button>
       </main>
     </>
   )
